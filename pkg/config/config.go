@@ -1,0 +1,22 @@
+package config
+
+import "os"
+
+type Config struct {
+	Address   string
+	User      string
+	Password  string
+	Debug     bool
+	LogPrefix string
+}
+
+func NewFromEnv(prefix string) *Config {
+	_, isDebugEnabled := os.LookupEnv(prefix + "DEBUG")
+	return &Config{
+		Address:   os.Getenv(prefix + "ADDRESS"),
+		User:      os.Getenv(prefix + "USER"),
+		Password:  os.Getenv(prefix + "PASSWORD"),
+		Debug:     isDebugEnabled,
+		LogPrefix: os.Getenv(prefix + "LOGPREFIX"),
+	}
+}
