@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/szeist/roomba-go/pkg/config"
+	"github.com/szeist/roomba-go/pkg/discover"
 	"github.com/szeist/roomba-go/pkg/roomba"
 	"github.com/szeist/roomba-go/pkg/status"
 )
@@ -18,6 +20,8 @@ var roombaStatus *status.Status
 
 func main() {
 	interactiveFlag := flag.Bool("interactive", false, "interactive mode")
+	discoverFlag := flag.Bool("discover", false, "discover roombas on network")
+	discoverTimeoutFlag := flag.Int("discover-timeout", 2, "roomba discovery timeout in seconds")
 	cmdFlag := flag.String("cmd", "", "roomba command")
 	statusFlag := flag.Bool("status", false, "get roomba status")
 	flag.Parse()
@@ -27,13 +31,12 @@ func main() {
 		exit(1)
 	}
 
-	cfg := config.NewFromEnv("ROOMBA_")
-	roombaClient = roomba.New(cfg)
-	err := roombaClient.Connect()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
-		exit(2)
+	if *discoverFlag {
+		discoverCmd(*discoverTimeoutFlag)
+		exit(0)
 	}
+
+	initRoombaClient()
 
 	if *interactiveFlag {
 		interactiveMode()
@@ -47,6 +50,16 @@ func main() {
 	}
 
 	roombaClient.Disconnect()
+}
+
+func initRoombaClient() {
+	cfg := config.NewFromEnv("ROOMBA_")
+	roombaClient = roomba.New(cfg)
+	err := roombaClient.Connect()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		exit(2)
+	}
 }
 
 func interactiveMode() {
@@ -90,6 +103,21 @@ func statusCmd() {
 		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 	}
 	fmt.Println(string(jsonStatus))
+}
+
+func discoverCmd(timeout int) {
+	results, err := discover.Discover(time.Duration(timeout) * time.Second)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+	}
+	if len(results) == 0 {
+		fmt.Println("No Roomba found :(")
+	} else {
+		fmt.Println("Discovered Roombas:")
+		for _, r := range results {
+			fmt.Println(r)
+		}
+	}
 }
 
 func exit(code int) {
