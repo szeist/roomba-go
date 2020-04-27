@@ -38,10 +38,15 @@ type Cap struct {
 }
 
 func (d *DiscoveryResult) String() string {
-	return fmt.Sprintf("%s\tRobotname: %s\tMAC: %s\tSW: %s",
+	return fmt.Sprintf("%s\tRobotname: %s\tBlid: %s\tMAC: %s\tSW: %s",
 		strings.Split(d.Address.String(), ":")[0],
 		d.Roomba.Robotname,
+		d.Roomba.GetBlid(),
 		d.Roomba.Mac,
 		d.Roomba.Sw,
 	)
+}
+
+func (d *DiscoveredRoomba) GetBlid() string {
+	return strings.Split(d.Hostname, "-")[1]
 }

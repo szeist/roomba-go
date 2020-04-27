@@ -12,6 +12,7 @@ import (
 	"github.com/szeist/roomba-go/pkg/config"
 	"github.com/szeist/roomba-go/pkg/discover"
 	"github.com/szeist/roomba-go/pkg/roomba"
+	"github.com/szeist/roomba-go/pkg/roombapass"
 	"github.com/szeist/roomba-go/pkg/status"
 )
 
@@ -22,6 +23,8 @@ func main() {
 	interactiveFlag := flag.Bool("interactive", false, "interactive mode")
 	discoverFlag := flag.Bool("discover", false, "discover roombas on network")
 	discoverTimeoutFlag := flag.Int("discover-timeout", 2, "roomba discovery timeout in seconds")
+	getPasswordFlag := flag.Bool("get-password", false, "get roomba password")
+	hostFlag := flag.String("host", "", "roomba ip address")
 	cmdFlag := flag.String("cmd", "", "roomba command")
 	statusFlag := flag.Bool("status", false, "get roomba status")
 	flag.Parse()
@@ -33,6 +36,15 @@ func main() {
 
 	if *discoverFlag {
 		discoverCmd(*discoverTimeoutFlag)
+		exit(0)
+	}
+
+	if *getPasswordFlag {
+		if *hostFlag == "" {
+			fmt.Fprintln(os.Stderr, "Specify the roomba ip address in the host flag")
+			exit(1)
+		}
+		getPasswordCmd(*hostFlag)
 		exit(0)
 	}
 
@@ -118,6 +130,17 @@ func discoverCmd(timeout int) {
 			fmt.Println(r)
 		}
 	}
+}
+
+func getPasswordCmd(host string) {
+	fmt.Fprintln(os.Stderr, "Press the home button on the roomba for at least 2 seconds.\nPress enter when ready!")
+	fmt.Scanln()
+	password, err := roombapass.GetPassword(host)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		exit(1)
+	}
+	fmt.Println(password)
 }
 
 func exit(code int) {
