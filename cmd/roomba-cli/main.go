@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -27,6 +28,8 @@ func main() {
 	hostFlag := flag.String("host", "", "roomba ip address")
 	cmdFlag := flag.String("cmd", "", "roomba command")
 	statusFlag := flag.Bool("status", false, "get roomba status")
+	debugFlag := flag.Bool("debug", false, "enable debug messages")
+	captureStatusFlag := flag.String("capture-status", "", "capture status to file")
 	flag.Parse()
 
 	if len(os.Args) < 2 {
@@ -48,7 +51,17 @@ func main() {
 		exit(0)
 	}
 
-	initRoombaClient()
+	var statusWriter io.Writer
+	if *captureStatusFlag != "" {
+		file, err := os.Create(*captureStatusFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to open file %s: %s", *captureStatusFlag, err.Error())
+			exit(1)
+		}
+		statusWriter = file
+	}
+
+	initRoombaClient(*debugFlag, &statusWriter)
 
 	if *interactiveFlag {
 		interactiveMode()
@@ -64,8 +77,12 @@ func main() {
 	roombaClient.Disconnect()
 }
 
-func initRoombaClient() {
+func initRoombaClient(debug bool, statusWriter *io.Writer) {
 	cfg := config.NewFromEnv("ROOMBA_")
+	cfg.Debug = debug
+	if statusWriter != nil {
+		cfg.StatusWriter = statusWriter
+	}
 	roombaClient = roomba.New(cfg)
 	err := roombaClient.Connect()
 	if err != nil {

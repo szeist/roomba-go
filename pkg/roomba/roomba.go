@@ -3,6 +3,7 @@ package roomba
 import (
 	"crypto/tls"
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -16,16 +17,20 @@ import (
 const statusPollIntervalMs time.Duration = 500
 
 type Roomba struct {
-	client      mqtt.Client
-	status      *status.Status
-	statusMutex *sync.Mutex
-	isConnected bool
+	client       mqtt.Client
+	status       *status.Status
+	statusMutex  *sync.Mutex
+	isConnected  bool
+	debug        bool
+	statusWriter io.Writer
 }
 
 func New(cfg *config.Config) *Roomba {
 	r := &Roomba{
-		status:      &status.Status{},
-		statusMutex: &sync.Mutex{},
+		status:       &status.Status{},
+		statusMutex:  &sync.Mutex{},
+		debug:        cfg.Debug,
+		statusWriter: *cfg.StatusWriter,
 	}
 
 	if cfg.Debug {
