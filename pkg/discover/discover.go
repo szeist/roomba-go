@@ -7,6 +7,9 @@ import (
 )
 
 const roombaDiscoverPort string = "5678"
+const broadcastAddress string = "255.255.255.255"
+const listenAddress string = ":0"
+const discoveryMessage = "irobotmcs"
 
 func Discover(timeout time.Duration) ([]*DiscoveryResult, error) {
 	var results = []*DiscoveryResult{}
@@ -34,7 +37,7 @@ func Discover(timeout time.Duration) ([]*DiscoveryResult, error) {
 }
 
 func createBroadcastConnection(timeout time.Duration) (*net.UDPConn, error) {
-	localAddr, err := net.ResolveUDPAddr("udp4", ":0")
+	localAddr, err := net.ResolveUDPAddr("udp4", listenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +56,12 @@ func createBroadcastConnection(timeout time.Duration) (*net.UDPConn, error) {
 }
 
 func sendDiscoveryMessage(conn *net.UDPConn) error {
-	broadcastAddr, err := net.ResolveUDPAddr("udp4", "255.255.255.255:"+roombaDiscoverPort)
+	bcAddr, err := net.ResolveUDPAddr("udp4", net.JoinHostPort(broadcastAddress, roombaDiscoverPort))
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.WriteToUDP([]byte("irobotmcs"), broadcastAddr)
+	_, err = conn.WriteToUDP([]byte(discoveryMessage), bcAddr)
 	return err
 }
 

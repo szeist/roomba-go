@@ -44,7 +44,7 @@ func sendMagicPacket(conn *tls.Conn) error {
 }
 
 func readInitialResponse(conn *tls.Conn) error {
-	buf := make([]byte, 128)
+	buf := make([]byte, 3)
 	readLen, err := conn.Read(buf)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func readInitialResponse(conn *tls.Conn) error {
 }
 
 func readPasswordResponse(conn *tls.Conn) (string, error) {
-	buf := make([]byte, 128)
+	buf := make([]byte, 64)
 	readLen, err := conn.Read(buf)
 	if err != nil {
 		return "", err

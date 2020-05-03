@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -15,34 +16,38 @@ import (
 )
 
 const statusPollIntervalMs time.Duration = 500
+const mqttProtocol string = "ssl"
+const mqttPort string = "8883"
 
 type Roomba struct {
-	client       mqtt.Client
-	status       *status.Status
-	statusMutex  *sync.Mutex
-	isConnected  bool
-	debug        bool
-	statusWriter io.Writer
+	client      mqtt.Client
+	status      *status.Status
+	statusMutex *sync.Mutex
+	isConnected bool
+	debug       bool
+	stateWriter io.Writer
 }
 
 func New(cfg *config.Config) *Roomba {
 	r := &Roomba{
-		status:       &status.Status{},
-		statusMutex:  &sync.Mutex{},
-		debug:        cfg.Debug,
-		statusWriter: *cfg.StatusWriter,
+		status:      &status.Status{},
+		statusMutex: &sync.Mutex{},
+		debug:       cfg.Debug,
+		stateWriter: cfg.StateWriter,
 	}
 
 	if cfg.Debug {
 		mqtt.DEBUG = log.New(os.Stderr, cfg.LogPrefix, 0)
 	}
 	mqtt.ERROR = log.New(os.Stderr, cfg.LogPrefix, 0)
-	opts := mqtt.NewClientOptions().AddBroker("ssl://" + cfg.Address + ":8883").SetClientID(cfg.User)
+	opts := mqtt.NewClientOptions()
+	opts = opts.AddBroker(getRoombaAddress(cfg.Address))
+	opts = opts.SetClientID(cfg.User)
+	opts = opts.SetDefaultPublishHandler(r.stateMessageHandler)
 	opts.Username = cfg.User
 	opts.Password = cfg.Password
 	opts.ProtocolVersion = 4
 	opts.TLSConfig = &tls.Config{InsecureSkipVerify: true}
-	opts.SetDefaultPublishHandler(r.stateMessageHandler)
 
 	r.client = mqtt.NewClient(opts)
 
@@ -80,13 +85,17 @@ func (r *Roomba) SendCommand(cmd string) error {
 	return nil
 }
 
-func (r *Roomba) GetStatus(timeout time.Duration) status.Status {
-	for i := 0; i < int(timeout/statusPollIntervalMs); i++ {
+func (r *Roomba) WaitForStatus(timeoutMs time.Duration) {
+	for i := 0; i < int(timeoutMs/statusPollIntervalMs); i++ {
 		if r.status.IsAllValuesPresent() {
 			break
 		}
 		time.Sleep(statusPollIntervalMs * time.Millisecond)
 	}
+}
+
+func (r *Roomba) GetStatus(timeoutMs time.Duration) status.Status {
+	r.WaitForStatus(timeoutMs)
 	return *r.status
 }
 
@@ -96,4 +105,8 @@ func (r *Roomba) IsConnected() bool {
 
 func GetSupportedCommands() []string {
 	return commands
+}
+
+func getRoombaAddress(roombaHost string) string {
+	return mqttProtocol + "://" + net.JoinHostPort(roombaHost, mqttPort)
 }

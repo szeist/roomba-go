@@ -22,8 +22,8 @@ func (r *Roomba) stateMessageHandler(client mqtt.Client, msg mqtt.Message) {
 		log.Printf("RECV: %s", string(msg.Payload()))
 	}
 
-	if r.statusWriter != nil {
-		r.statusWriter.Write(append(msg.Payload(), byte('\n')))
+	if r.stateWriter != nil {
+		r.stateWriter.Write(append(msg.Payload(), byte('\n')))
 	}
 
 	reportedState := stateMessage{}
